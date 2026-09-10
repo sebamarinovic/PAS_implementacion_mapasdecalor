@@ -1,0 +1,39 @@
+# Líneas de proceso PAS — relación funcional entre plantas
+#
+# FUENTE: indicado directamente por Sebastián en conversación de trabajo
+# (2026-09-10). NO proviene del Excel original
+# (PAS_SharePoint_Implementacion_v1.xlsx) ni fue parte del levantamiento
+# de Leonardo Paredes / Eleazar Avendaño.
+#
+# Las dos líneas de proceso gas -> ácido están confirmadas:
+#   GCP-2 -> CAP-3
+#   GCP-4 -> CAP-4
+#
+# La relación de enfriamiento cruzado quedó PARCIALMENTE descrita: se
+# confirma qué torre enfría a qué planta, pero falta precisar la
+# consecuencia operacional exacta si una torre se detiene (¿la planta de
+# ácido sigue operando en modo degradado, o debe pararse?). Mientras no
+# se confirme, esta información es SOLO REFERENCIAL: no se usa para
+# calcular criticidad ni para clasificar equipos automáticamente, igual
+# que los grupos de redundancia "pendientes de validación" en rules.yaml.
+
+fuente: >
+  Líneas de proceso y enfriamiento cruzado indicados directamente por
+  Sebastián (2026-09-10). Enfriamiento cruzado pendiente de confirmación
+  operacional completa por Operaciones.
+
+lineas_proceso:
+  - nombre: "Línea 1"
+    etapas: ["GCP2", "CAP3"]
+  - nombre: "Línea 2"
+    etapas: ["GCP4", "CAP4"]
+
+enfriamiento_cruzado:
+  - torre: "Torre de Enfriamiento 2/3"
+    enfria_a: "CAP4"
+    sistema: "ácido/agua"
+    nota: "Pendiente de confirmar si, al detenerse, CAP-4 mantiene operación degradada o debe pararse."
+  - torre: "Torre de Enfriamiento 4"
+    enfria_a: "CAP3"
+    sistema: "ácido/agua"
+    nota: "Pendiente de confirmar si, al detenerse, CAP-3 mantiene operación degradada o debe pararse."

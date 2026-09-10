@@ -1,12 +1,12 @@
 """Mapa de calor PAS (sección 8): vista general por planta y drill-down
-por área/sistema, con filtros y porcentajes (no sólo cantidades absolutas)."""
+por área/sistema, con filtros, porcentajes (no sólo cantidades absolutas),
+redundancia y línea de proceso."""
 import datetime as dt
 
 import pandas as pd
-import plotly.graph_objects as go
 import streamlit as st
 
-from core import analytics, rules, utils
+from core import analytics, process_lines, rules, ui_charts
 from core.session import get_conn, sidebar_identidad
 
 st.set_page_config(page_title="PAS · Mapa de calor", page_icon="🗺️", layout="wide")
@@ -56,55 +56,16 @@ if df.empty:
     st.warning("No hay equipos que coincidan con los filtros seleccionados.")
     st.stop()
 
-
-def _heatmap(agg: pd.DataFrame, etiqueta_col: str, titulo: str):
-    agg = agg.sort_values(etiqueta_col)
-    riesgo = (agg["criticos_pct"] + 0.5 * agg["degradados_pct"]).clip(upper=100)
-    texto = [
-        f"<b>{row[etiqueta_col]}</b><br>{int(row['n_equipos'])} equipos<br>"
-        f"Disp {row['disponibilidad_pct']}% · Crít {row['criticos_pct']}% · "
-        f"Degr {row['degradados_pct']}% · S/Eval {row['sin_evaluar_pct']}%"
-        for _, row in agg.iterrows()
-    ]
-    fig = go.Figure(data=go.Heatmap(
-        z=[riesgo.tolist()],
-        x=agg[etiqueta_col].tolist(),
-        y=[titulo],
-        text=[texto],
-        texttemplate="%{text}",
-        textfont={"size": 11},
-        colorscale=[[0, "#2E7D32"], [0.5, "#F9A825"], [1.0, "#C62828"]],
-        zmin=0, zmax=100,
-        showscale=False,
-        xgap=6, ygap=6,
-    ))
-    fig.update_layout(height=170 + 20 * 0, margin=dict(l=10, r=10, t=10, b=10))
-    fig.update_yaxes(showticklabels=False)
-    return fig
-
-
 st.subheader("Vista general por planta")
 kpp = analytics.kpis_por_planta(df)
-st.plotly_chart(_heatmap(kpp, "planta_visible", "PAS"), use_container_width=True)
-
-tabla_planta = kpp[["planta_visible", "n_equipos", "disponibilidad_pct", "criticos_pct", "degradados_pct", "sin_evaluar_pct"]].rename(columns={
-    "planta_visible": "Planta", "n_equipos": "N° equipos", "disponibilidad_pct": "% Disponibilidad",
-    "criticos_pct": "% Críticos", "degradados_pct": "% Degradados", "sin_evaluar_pct": "% Sin evaluar",
-})
-st.dataframe(
-    tabla_planta.style.apply(
-        lambda r: [f"background-color: {utils.color_semaforo(r['% Críticos'], r['% Degradados'], r['% Sin evaluar'])}"] * len(r),
-        axis=1,
-    ).format({c: "{:.1f}%" for c in ["% Disponibilidad", "% Críticos", "% Degradados", "% Sin evaluar"]}),
-    use_container_width=True, hide_index=True,
-)
+ui_charts.render_tarjetas_calor(kpp, "planta_visible")
 
 if len(plantas_filtro) == 1:
     planta_unica = plantas_filtro[0]
     nombre_visible = catalogos["plantas_nombre_visible"].get(planta_unica, planta_unica)
     st.subheader(f"Detalle por área — {nombre_visible}")
     agg_area = analytics.heatmap_area_df(df)
-    st.plotly_chart(_heatmap(agg_area, "area_sistema", nombre_visible), use_container_width=True)
+    ui_charts.render_tarjetas_calor(agg_area, "area_sistema")
 
     st.subheader("Equipos del área seleccionada")
     cols_detalle = ["tag", "area_sistema", "tipo_elemento", "estado", "disponibilidad", "criticidad", "hallazgo", "aviso_sap"]
@@ -125,10 +86,17 @@ equipos_dict = df.to_dict("records")
 ultimas_dict = {r["equipment_id"]: r for r in equipos_dict}
 redundancia = rules.evaluate_redundancy(equipos_dict, ultimas_dict)
 if redundancia:
+    fig_red = ui_charts.grafico_redundancia(redundancia)
+    if fig_red is not None:
+        st.plotly_chart(fig_red, use_container_width=True)
     df_red = pd.DataFrame(redundancia)[[
         "grupo", "planta", "area_sistema", "n_miembros", "n_disponibles",
         "minimo_disponible", "estado_redundancia", "validado",
-    ]].rename(columns={
+    ]]
+    df_red["minimo_disponible"] = df_red["minimo_disponible"].apply(
+        lambda v: "—" if pd.isna(v) else int(v)
+    )
+    df_red = df_red.rename(columns={
         "grupo": "Grupo", "planta": "Planta", "area_sistema": "Área/Sistema",
         "n_miembros": "N° miembros", "n_disponibles": "N° disponibles",
         "minimo_disponible": "Mínimo sugerido", "estado_redundancia": "Estado",
@@ -139,3 +107,23 @@ if redundancia:
         "Los grupos marcados como 'Pendiente de validación' no se clasifican automáticamente como "
         "'Sin respaldo' hasta que Operaciones confirme la regla en config/rules.yaml (ver página Administración)."
     )
+
+st.divider()
+st.subheader("Línea de proceso")
+st.caption(
+    "Relación funcional entre plantas: color de cada etapa = severidad actual de esa planta. "
+    "Los enlaces punteados (enfriamiento cruzado) están pendientes de confirmación operacional — "
+    "ver detalle abajo."
+)
+kpp_completo = analytics.kpis_por_planta(analytics.build_estado_df(conn))
+st.plotly_chart(process_lines.grafico_lineas_proceso(kpp_completo), use_container_width=True)
+
+with st.expander("Detalle de líneas de proceso y enfriamiento cruzado"):
+    datos = process_lines.load_process_lines()
+    st.markdown("**Líneas de proceso (gas → ácido):**")
+    for linea in datos["lineas_proceso"]:
+        st.markdown(f"- {' → '.join(linea['etapas_visible'])}")
+    st.markdown("**Enfriamiento cruzado — ⚠ pendiente de confirmar por Operaciones:**")
+    for rel in datos["enfriamiento_cruzado"]:
+        st.markdown(f"- {rel['torre']} enfría sistema {rel['sistema']} de **{rel['enfria_a_visible']}**. _{rel['nota']}_")
+    st.caption(datos["fuente"])

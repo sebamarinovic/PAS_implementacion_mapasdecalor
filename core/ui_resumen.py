@@ -4,16 +4,7 @@ from __future__ import annotations
 
 import streamlit as st
 
-from core import analytics, rules, utils
-
-_ETIQUETAS_PLANTA = {
-    "planta_visible": "Planta",
-    "n_equipos": "N° equipos",
-    "disponibilidad_pct": "% Disponibilidad",
-    "criticos_pct": "% Críticos",
-    "degradados_pct": "% Degradados",
-    "sin_evaluar_pct": "% Sin evaluar",
-}
+from core import analytics, rules, ui_charts
 
 
 def render(conn) -> None:
@@ -49,24 +40,27 @@ def render(conn) -> None:
 
     st.subheader("Condición por planta")
     kpp = analytics.kpis_por_planta(df)
-    if kpp.empty:
-        st.info("Sin datos cargados todavía.")
-    else:
-        tabla = kpp[list(_ETIQUETAS_PLANTA.keys())].rename(columns=_ETIQUETAS_PLANTA)
+    ui_charts.render_tarjetas_calor(kpp, "planta_visible")
 
-        def _estilo(row):
-            color = utils.color_semaforo(
-                row["% Críticos"], row["% Degradados"], row["% Sin evaluar"]
-            )
-            return [f"background-color: {color}"] * len(row)
+    st.divider()
+    col_a, col_b = st.columns([1, 1.4])
+    with col_a:
+        st.subheader("Distribución PAS por criticidad")
+        st.plotly_chart(ui_charts.grafico_distribucion_criticidad(df), use_container_width=True)
+    with col_b:
+        st.subheader("Criticidad por planta")
+        st.plotly_chart(ui_charts.grafico_criticidad_por_planta(df), use_container_width=True)
 
-        st.dataframe(
-            tabla.style.apply(_estilo, axis=1).format({
-                "% Disponibilidad": "{:.1f}%", "% Críticos": "{:.1f}%",
-                "% Degradados": "{:.1f}%", "% Sin evaluar": "{:.1f}%",
-            }),
-            use_container_width=True, hide_index=True,
+    tendencia = analytics.tendencia_diaria(conn)
+    fig_tendencia = ui_charts.grafico_tendencia(tendencia)
+    st.subheader("Tendencia")
+    if fig_tendencia is None:
+        st.caption(
+            "Aún no hay suficientes turnos registrados en fechas distintas para mostrar una "
+            "tendencia. Este gráfico se completa solo a medida que se cierran turnos."
         )
+    else:
+        st.plotly_chart(fig_tendencia, use_container_width=True)
 
     st.divider()
     cols = st.columns(4)

@@ -213,3 +213,62 @@ def comparar_periodos(df_actual: pd.DataFrame, df_anterior: pd.DataFrame) -> dic
         "permanecen_criticos": sorted(permanecen_criticos),
         "cambios_disponibilidad": cambios_disponibilidad,
     }
+
+
+CRITICIDAD_ORDEN = ["Operativo", "Degradado", "Verificar", "Ruta crítica"]
+
+
+def distribucion_criticidad(df: pd.DataFrame) -> dict:
+    """Conteo de equipos PAS por categoría de criticidad (para el gráfico
+    de torta del Resumen y del informe PDF)."""
+    counts = df["criticidad"].value_counts()
+    return {c: int(counts.get(c, 0)) for c in CRITICIDAD_ORDEN}
+
+
+def distribucion_criticidad_por_planta(df: pd.DataFrame) -> pd.DataFrame:
+    """Conteo de equipos por planta x criticidad, para el gráfico de barras
+    apiladas del Resumen (una fila por planta, una columna por categoría)."""
+    if df.empty:
+        return pd.DataFrame()
+    catalogos = rules.load_catalogs()
+    nombres = catalogos.get("plantas_nombre_visible", {})
+    tabla = pd.crosstab(df["planta"], df["criticidad"])
+    for c in CRITICIDAD_ORDEN:
+        if c not in tabla.columns:
+            tabla[c] = 0
+    tabla = tabla[CRITICIDAD_ORDEN].reset_index()
+    tabla["planta_visible"] = tabla["planta"].map(lambda p: nombres.get(p, p))
+    return tabla
+
+
+def tendencia_diaria(conn) -> pd.DataFrame:
+    """% disponibilidad PAS por fecha operacional, usando la última
+    evaluación de cada equipo en cada día (sección 13: tendencia semanal).
+
+    Con pocos turnos registrados el resultado tendrá pocos puntos; el
+    gráfico está preparado para mostrar la tendencia real a medida que se
+    acumulan turnos.
+    """
+    equipos_df = pd.DataFrame([dict(r) for r in db.get_equipos(conn)])
+    evals_df = db.get_evaluaciones_df(conn)
+    if evals_df.empty or equipos_df.empty:
+        return pd.DataFrame(columns=["fecha", "disponibilidad_pct", "criticos_pct"])
+
+    evals_df = evals_df.copy()
+    evals_df["fecha"] = pd.to_datetime(evals_df["fecha_hora"], errors="coerce").dt.date
+    evals_df = evals_df.dropna(subset=["fecha"]).sort_values(["fecha_hora", "evaluation_id"])
+
+    total_equipos = len(equipos_df)
+    filas = []
+    for fecha, grupo_fecha in evals_df.groupby("fecha"):
+        ultimas = evals_df[evals_df["fecha"] <= fecha].sort_values(
+            ["fecha_hora", "evaluation_id"]
+        ).groupby("equipment_id", as_index=False).tail(1)
+        disponibles = ultimas["disponibilidad"].apply(utils.es_estado_disponible).sum()
+        criticos = int((ultimas["criticidad"] == "Ruta crítica").sum())
+        filas.append({
+            "fecha": fecha,
+            "disponibilidad_pct": round(100 * disponibles / total_equipos, 1),
+            "criticos_pct": round(100 * criticos / total_equipos, 1),
+        })
+    return pd.DataFrame(filas)

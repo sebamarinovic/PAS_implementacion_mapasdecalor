@@ -18,9 +18,12 @@ Regla de diseño no negociable: **actualizar un equipo debe tomar menos de
 - Muestra un mapa de calor por planta y por área/sistema.
 - Evalúa redundancia por grupo (bombas principal/spare, etc.).
 - Mantiene historial completo (append-only, nunca se borra ni sobreescribe).
-- Genera informes PDF por área, consolidado PAS y semanal comparativo.
+- Genera informes PDF por área, consolidado PAS y semanal comparativo, con
+  gráficos (torta de criticidad, barras de disponibilidad).
 - Detecta problemas de calidad de datos (TAG duplicados, contradicciones,
   valores fuera de catálogo, etc.) sin corregirlos automáticamente.
+- Muestra la línea de proceso entre plantas (GCP-2→CAP-3, GCP-4→CAP-4) y
+  el enfriamiento cruzado entre torres (pendiente de confirmación).
 
 ## Arquitectura
 
@@ -38,14 +41,17 @@ core/
   rules.py          motor de reglas (config/rules.yaml)
   analytics.py      KPIs, mapa de calor, comparación de periodos
   validators.py     control de calidad (sección 14)
-  reports.py        generación de PDF (ReportLab)
+  reports.py        generación de PDF (ReportLab: KPIs, heatmap, gráficos)
   pi_connector.py   interfaz preparada para PI System (aún no conectado)
+  process_lines.py  línea de proceso entre plantas (config/process_lines.yaml)
   session.py        conexión cacheada + widgets compartidos (Streamlit)
   ui_resumen.py     contenido de la página Resumen (compartido con app.py)
+  ui_charts.py      tarjetas de mapa de calor y gráficos Plotly compartidos
   utils.py          turnos, colores, helpers
 config/
-  catalogs.yaml     valores controlados (estado, disponibilidad, etc.)
-  rules.yaml        grupos de redundancia y clasificación de criticidad
+  catalogs.yaml       valores controlados (estado, disponibilidad, etc.)
+  rules.yaml          grupos de redundancia y clasificación de criticidad
+  process_lines.yaml  líneas de proceso y enfriamiento cruzado (ver decisión 7)
 data/
   pas.db            base SQLite (se crea/actualiza con import_initial_data.py)
   source/           Excel(es) fuente del levantamiento original
@@ -113,6 +119,15 @@ decisiones se documentan explícitamente en vez de dejarlas implícitas:
    provisional editable en `config/catalogs.yaml`: la hoja de diseño
    original advierte explícitamente que esa nomenclatura no está
    confirmada por Operaciones.
+7. **Línea de proceso** (`config/process_lines.yaml`): GCP-2→CAP-3 y
+   GCP-4→CAP-4 vienen confirmadas directamente por Sebastián y no
+   requieren más validación. El **enfriamiento cruzado** entre torres
+   (Torre Enf. 2/3 → CAP-4, Torre Enf. 4 → CAP-3) se dibuja en el mapa de
+   calor como referencia visual (líneas punteadas grises), pero **no se
+   usa para calcular criticidad**: falta confirmar qué ocurre
+   operacionalmente cuando una torre se detiene (¿la planta de ácido
+   sigue en modo degradado o debe pararse?). Mismo criterio que los
+   grupos de redundancia: mostrar, no inventar.
 
 Cuando una decisión es puramente operacional y no hay certeza (p. ej. el
 mínimo exacto de bombas requeridas en un grupo), el sistema la deja
