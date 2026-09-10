@@ -1,0 +1,156 @@
+# Reglas operacionales PAS - grupos de redundancia
+#
+# version: se incrementa cada vez que Operaciones valide o modifique una
+# regla. Queda registrada en cada evaluación (rule_version) para
+# reproducibilidad histórica (sección 9 y 16 del encargo).
+rule_version: "1.0.0-pendiente-validacion"
+
+# -----------------------------------------------------------------------
+# IMPORTANTE - LEER ANTES DE MODIFICAR
+# -----------------------------------------------------------------------
+# Estos 10 grupos de redundancia y sus reglas en texto libre provienen de
+# la columna ReglaGrupo de "01_Equipos_Maestro". Ninguno fue inventado.
+#
+# Sin embargo, la propia hoja "08_Plan_Piloto" define como Fase 0 un paso
+# de "Saneamiento" (validar duplicados, contradicciones y hallazgos) ANTES
+# de usar estas reglas para clasificar automáticamente. Varias reglas en
+# texto (ej. "al menos un respaldo real", "evitar operar con sólo una de
+# tres") no traen un mínimo numérico exacto, y dos grupos (CAP4-BHZ y
+# GCP2-P102) tienen TAG duplicados/contradictorios reportados en
+# 07_Control_Calidad todavía sin cerrar.
+#
+# Por eso, siguiendo la instrucción explícita del encargo ("cuando no
+# exista certeza, mostrar REGLA PENDIENTE DE VALIDACIÓN en lugar de
+# clasificar automáticamente como crítico"), TODOS los grupos parten con
+# "validado: false". El sistema seguirá mostrando el conteo real de
+# equipos disponibles/operando por grupo, pero no marcará "Sin respaldo"
+# ni "Pérdida de redundancia" en el mapa de calor hasta que Operaciones
+# (Leonardo Paredes / Eleazar Avendaño / Jefe de Turno) confirme
+# "validado: true" y, si corresponde, ajuste minimo_disponible.
+#
+# minimo_disponible: interpretación sugerida (no vinculante) del texto de
+# la regla, sólo para referencia de quien vaya a validar. NO se usa en los
+# cálculos mientras validado sea false.
+# -----------------------------------------------------------------------
+
+grupos_redundancia:
+
+  GCP2-P101:
+    planta: "GCP2"
+    area_sistema: "GCP-2"
+    regla_original: "Parejas A-B y C-D; al menos un respaldo real"
+    minimo_disponible: null   # ambiguo: no se puede derivar un número único
+    validado: false
+    nota: "Grupo con 4 miembros + 1 spare (P101A/B/C/D + P101S). La regla textual no especifica si el spare cubre ambas parejas. REQUIERE VALIDACIÓN."
+
+  GCP2-P102:
+    planta: "GCP2"
+    area_sistema: "GCP-2"
+    regla_original: "Parejas A-B y C-D; al menos un respaldo real"
+    minimo_disponible: null
+    validado: false
+    nota: "Contiene TAG duplicado P102C(II) con datos distintos (ver control de calidad #3). REQUIERE VALIDACIÓN antes de clasificar."
+
+  GCP2-P110:
+    planta: "GCP2"
+    area_sistema: "GCP-2"
+    regla_original: "Grupos A-B-C y D-E-F; evitar operar con sólo una de tres"
+    minimo_disponible: null
+    validado: false
+    nota: "Regla sugiere mínimo 2 de cada trío (A-B-C / D-E-F), pero no está confirmado por Operaciones. REQUIERE VALIDACIÓN."
+
+  GCP4-P101:
+    planta: "GCP4"
+    area_sistema: "GCP-4"
+    regla_original: "Parejas A-B y C-D; al menos un respaldo real"
+    minimo_disponible: null
+    validado: false
+    nota: "Análogo a GCP2-P101. REQUIERE VALIDACIÓN."
+
+  GCP4-P102:
+    planta: "GCP4"
+    area_sistema: "GCP-4"
+    regla_original: "Parejas A-B y C-D; al menos un respaldo real"
+    minimo_disponible: null
+    validado: false
+    nota: "Análogo a GCP2-P102. REQUIERE VALIDACIÓN."
+
+  GCP4-P110:
+    planta: "GCP4"
+    area_sistema: "GCP-4"
+    regla_original: "Grupos A-B-C y D-E-F; evitar operar con sólo una de tres"
+    minimo_disponible: null
+    validado: false
+    nota: "Análogo a GCP2-P110. REQUIERE VALIDACIÓN."
+
+  CAP3-BHZ:
+    planta: "CAP3"
+    area_sistema: "Balance ácido"
+    regla_original: "Una operativa y una reserva verificable"
+    minimo_disponible: 2
+    validado: false
+    nota: "Regla numérica clara (1 operativa + 1 reserva = 2), pero Operaciones aún no ha confirmado el criterio de 'reserva verificable'. REQUIERE VALIDACIÓN."
+
+  CAP4-BHZ:
+    planta: "CAP4"
+    area_sistema: "Balance ácido"
+    regla_original: "Una operativa y una reserva verificable"
+    minimo_disponible: 2
+    validado: false
+    nota: "TAG 5327-BHZ-402 duplicado con datos contradictorios (control de calidad #10/#16). REQUIERE VALIDACIÓN antes de aplicar la regla numérica."
+
+  AGUAS-BOC-901:
+    planta: "Circuito de aguas"
+    area_sistema: "Agua torre / desmineralizada"
+    regla_original: "Mínimo dos disponibles; cadena de descarga completa"
+    minimo_disponible: 2
+    validado: false
+    nota: "Uno de los miembros (BOC901) tiene Estado/Disponibilidad contradictorios (control de calidad #17). REQUIERE VALIDACIÓN."
+
+  AGUAS-BOC-904:
+    planta: "Circuito de aguas"
+    area_sistema: "Agua torre / desmineralizada"
+    regla_original: "Mínimo dos disponibles; cadena de descarga completa"
+    minimo_disponible: 2
+    validado: false
+    nota: "Regla numérica clara, sin contradicciones detectadas en sus miembros, pero aún no confirmada formalmente por Operaciones. REQUIERE VALIDACIÓN."
+
+# -----------------------------------------------------------------------
+# Reglas de clasificación de Criticidad / Prioridad por equipo individual
+# (no dependen de grupos de redundancia). Igual que en 03_Diccionario_SP:
+# Criticidad/Prioridad se calculan, no se editan a mano.
+# -----------------------------------------------------------------------
+clasificacion_individual:
+  # Estado + Disponibilidad -> Criticidad / Prioridad
+  # "contradictorio" = combinación que la propia base ya marcó como
+  # inconsistente (ej. Fuera de servicio + Disponible). Se muestra
+  # "Requiere validación" y NO se fuerza a un valor.
+  matriz:
+    - estado: "Fuera de servicio"
+      disponibilidad: "No disponible"
+      criticidad: "Ruta crítica"
+      prioridad: "P1"
+    - estado: "Mala"
+      disponibilidad: "No disponible"
+      criticidad: "Ruta crítica"
+      prioridad: "P1"
+    - estado: "Regular"
+      criticidad: "Degradado"
+      prioridad: "P2"
+    - estado: "Sin evaluar"
+      criticidad: "Verificar"
+      prioridad: "P3"
+    - disponibilidad: "Sin evaluar"
+      criticidad: "Verificar"
+      prioridad: "P3"
+    - estado: "Buena"
+      disponibilidad: "Disponible"
+      criticidad: "Operativo"
+      prioridad: "Control"
+    - estado: "Buena"
+      disponibilidad: "Disponible con restricción"
+      criticidad: "Degradado"
+      prioridad: "P2"
+  default:
+    criticidad: "Verificar"
+    prioridad: "P3"

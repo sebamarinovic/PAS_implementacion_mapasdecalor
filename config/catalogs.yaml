@@ -1,0 +1,86 @@
+# Catálogos controlados para PAS - Levantamiento Operacional
+#
+# Estos valores fueron tomados directamente de la hoja "04_Catalogos" del
+# archivo PAS_SharePoint_Implementacion_v1.xlsx (diseño ya validado por
+# Sebastián / Operaciones) y de los valores realmente usados en las 163
+# evaluaciones iniciales (hoja 02_Evaluaciones_Init). Se mantienen tal cual
+# para no romper compatibilidad con los datos ya levantados por Leonardo
+# Paredes y Eleazar Avendaño.
+#
+# DECISIÓN DOCUMENTADA: el prompt original sugiere "Bueno/Malo" para el
+# estado, pero la base real usa "Buena/Regular/Mala" (concuerda en género
+# con "condición"). Se conserva el valor real de la base para no inventar
+# ni corregir datos existentes.
+
+estado_actual:
+  - "Buena"
+  - "Regular"
+  - "Mala"
+  - "Fuera de servicio"
+  - "Sin evaluar"
+
+disponibilidad:
+  - "Disponible"
+  - "Disponible con restricción"
+  - "No disponible"
+  - "Sin evaluar"
+
+modo_operacion:
+  - "Automático/Remoto"
+  - "Manual/Remoto"
+  - "Manual/Local"
+  - "No aplica"
+  - "Sin evaluar"
+
+tipo_turno:
+  - "Día"
+  - "Noche"
+
+# CódigoTurno / cuadrilla: la hoja 04_Catalogos indica explícitamente que
+# la nomenclatura A/B/C/D no está confirmada por Operaciones. Se deja un
+# valor neutro "No definido" más un campo de texto libre en la UI para no
+# inventar la nomenclatura corporativa real.
+codigo_turno:
+  - "No definido"
+  - "A"
+  - "B"
+  - "C"
+  - "D"
+
+# Criticidad y Prioridad NO son editables manualmente por el Jefe de Turno:
+# se calculan automáticamente (ver core/rules.py) a partir de Estado +
+# Disponibilidad, igual que en el flujo PA-01 diseñado en 06_Flujos_Auto.
+criticidad:
+  - "Operativo"
+  - "Degradado"
+  - "Verificar"
+  - "Ruta crítica"
+
+prioridad:
+  - "Control"
+  - "P3"
+  - "P2"
+  - "P1"
+
+tipo_elemento:
+  - "Bomba"
+  - "Motor/Bomba"
+  - "Ventilador"
+  - "Válvula"
+  - "Válvula de control"
+  - "Válvula on/off"
+
+plantas:
+  - "GCP2"
+  - "GCP4"
+  - "CAP3"
+  - "CAP4"
+  - "Circuito de aguas"
+
+# Nombre de despliegue amigable por planta (para KPIs / mapa de calor)
+plantas_nombre_visible:
+  GCP2: "GCP-2"
+  GCP4: "GCP-4"
+  CAP3: "CAP-3"
+  CAP4: "CAP-4"
+  "Circuito de aguas": "Circuito de Aguas"
