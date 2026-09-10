@@ -123,7 +123,23 @@ with st.expander("Detalle de líneas de proceso y enfriamiento cruzado"):
     st.markdown("**Líneas de proceso (gas → ácido):**")
     for linea in datos["lineas_proceso"]:
         st.markdown(f"- {' → '.join(linea['etapas_visible'])}")
+
+    st.markdown("**Enfriamiento de gases de entrada (P-101) — crítico funcional:**")
+    st.caption("Enfrían la totalidad de los gases de entrada de su planta; pérdida total = crítico para toda la planta, no sólo el subtren.")
+    for grupo in datos["enfriamiento_gases_entrada"]:
+        for sub in grupo["subtrenes"]:
+            st.markdown(f"- {sub['nombre']}: {', '.join(sub['tags'])}")
+
+    st.markdown("**Bombas de agua desmineralizada:**")
+    for b in datos["bombas_agua_desmi"]:
+        nombre_planta = rules.load_catalogs()["plantas_nombre_visible"].get(b["enfria_a"], b["enfria_a"])
+        st.markdown(f"- {b['tag']} → enfría {nombre_planta}")
+
     st.markdown("**Enfriamiento cruzado — ⚠ pendiente de confirmar por Operaciones:**")
     for rel in datos["enfriamiento_cruzado"]:
-        st.markdown(f"- {rel['torre']} enfría sistema {rel['sistema']} de **{rel['enfria_a_visible']}**. _{rel['nota']}_")
+        st.markdown(
+            f"- {rel['torre']} enfría sistema {rel['sistema']} de **{rel['enfria_a_visible']}** · "
+            f"bombas: {', '.join(rel['bombas'])} · intercambiadores: {', '.join(rel['intercambiadores'])} "
+            f"(_aún no están en el catálogo de 163 equipos_). _{rel['nota']}_"
+        )
     st.caption(datos["fuente"])

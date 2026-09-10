@@ -44,7 +44,9 @@ with tab_reglas:
     grupos = rules.load_rules()["grupos_redundancia"]
     filas = [{
         "Grupo": nombre, "Planta": cfg["planta"], "Área/Sistema": cfg["area_sistema"],
-        "Regla original": cfg["regla_original"], "Mínimo sugerido": cfg.get("minimo_disponible"),
+        "Regla original": cfg["regla_original"],
+        "Mínimo sugerido": cfg["minimo_disponible"] if cfg.get("minimo_disponible") is not None else "—",
+        "Crítico funcional": "⚠ Sí" if cfg.get("critico_funcional") else "",
         "Validado": "Sí" if cfg.get("validado") else "No", "Nota": cfg.get("nota", ""),
     } for nombre, cfg in grupos.items()]
     st.dataframe(filas, use_container_width=True, hide_index=True)

@@ -3,24 +3,28 @@
 # FUENTE: indicado directamente por Sebastián en conversación de trabajo
 # (2026-09-10). NO proviene del Excel original
 # (PAS_SharePoint_Implementacion_v1.xlsx) ni fue parte del levantamiento
-# de Leonardo Paredes / Eleazar Avendaño.
+# de Leonardo Paredes / Eleazar Avendaño. Se mencionó un manual de
+# operaciones y filosofía de control que aún no ha llegado adjunto — esta
+# información se irá completando/corrigiendo cuando se reciba.
 #
 # Las dos líneas de proceso gas -> ácido están confirmadas:
 #   GCP-2 -> CAP-3
 #   GCP-4 -> CAP-4
 #
 # La relación de enfriamiento cruzado quedó PARCIALMENTE descrita: se
-# confirma qué torre enfría a qué planta, pero falta precisar la
-# consecuencia operacional exacta si una torre se detiene (¿la planta de
-# ácido sigue operando en modo degradado, o debe pararse?). Mientras no
-# se confirme, esta información es SOLO REFERENCIAL: no se usa para
-# calcular criticidad ni para clasificar equipos automáticamente, igual
-# que los grupos de redundancia "pendientes de validación" en rules.yaml.
+# confirma qué torre enfría a qué planta y qué bombas/intercambiadores
+# la componen, pero falta precisar la consecuencia operacional exacta si
+# una torre se detiene (¿la planta de ácido sigue operando en modo
+# degradado, o debe pararse?). Mientras no se confirme, esta información
+# es SOLO REFERENCIAL: no se usa para calcular criticidad ni para
+# clasificar equipos automáticamente, igual que los grupos de redundancia
+# "pendientes de validación" en rules.yaml.
 
 fuente: >
   Líneas de proceso y enfriamiento cruzado indicados directamente por
   Sebastián (2026-09-10). Enfriamiento cruzado pendiente de confirmación
-  operacional completa por Operaciones.
+  operacional completa por Operaciones (manual de operaciones y filosofía
+  de control aún no recibido).
 
 lineas_proceso:
   - nombre: "Línea 1"
@@ -28,12 +32,42 @@ lineas_proceso:
   - nombre: "Línea 2"
     etapas: ["GCP4", "CAP4"]
 
+# Bombas P-101: enfrían la totalidad de los gases de entrada de su planta
+# (GCP-2 / GCP-4). Su pérdida total es crítica para toda la planta, no
+# sólo para el subtren. Estructura de subtrenes según Sebastián:
+#   GCP-2A = P101A/B/S   ·   GCP-2B = P101C/D/S   (comparten spare S)
+#   GCP-4A = P101A/B/S   ·   GCP-4B = P101C/D/S   (comparten spare S)
+# Ya reflejado en config/rules.yaml (grupos GCP2-P101 / GCP4-P101,
+# critico_funcional: true, todavía "validado: false").
+enfriamiento_gases_entrada:
+  - planta: "GCP2"
+    subtrenes: [{nombre: "GCP-2A", tags: ["P101A(II)", "P101B(II)", "P101S(II)"]},
+                {nombre: "GCP-2B", tags: ["P101C(II)", "P101D(II)", "P101S(II)"]}]
+  - planta: "GCP4"
+    subtrenes: [{nombre: "GCP-4A", tags: ["P101A(IV)", "P101B(IV)", "P101S(IV)"]},
+                {nombre: "GCP-4B", tags: ["P101C(IV)", "P101D(IV)", "P101S(IV)"]}]
+
+# Bombas de enfriamiento de agua desmineralizada por planta de ácido.
+# BHZ-305 y BHZ-405 ya existen en el catálogo maestro (planta "Circuito
+# de aguas"); esta es su función real según Sebastián.
+bombas_agua_desmi:
+  - tag: "5328-BHZ-305"
+    enfria_a: "CAP3"
+  - tag: "5328-BHZ-405"
+    enfria_a: "CAP4"
+
+# Enfriamiento cruzado: cada torre enfría el sistema ácido/agua de la
+# planta CONTRARIA a su numeración (de ahí el cruce en el diagrama).
 enfriamiento_cruzado:
   - torre: "Torre de Enfriamiento 2/3"
     enfria_a: "CAP4"
     sistema: "ácido/agua"
+    bombas: ["BOC904", "BOC905", "BOC906"]   # = grupo AGUAS-BOC-904 en rules.yaml
+    intercambiadores: ["INC-401", "INC-402", "INC-403", "INC-404"]  # aún no están en el catálogo de 163 equipos
     nota: "Pendiente de confirmar si, al detenerse, CAP-4 mantiene operación degradada o debe pararse."
   - torre: "Torre de Enfriamiento 4"
     enfria_a: "CAP3"
     sistema: "ácido/agua"
+    bombas: ["BOC901", "BOC902", "BOC903"]   # = grupo AGUAS-BOC-901 en rules.yaml
+    intercambiadores: ["INC-301", "INC-302", "INC-303", "INC-304"]  # aún no están en el catálogo de 163 equipos; "INC-304" es una lectura probable de un dato repetido, a confirmar
     nota: "Pendiente de confirmar si, al detenerse, CAP-3 mantiene operación degradada o debe pararse."

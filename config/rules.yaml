@@ -41,7 +41,16 @@ grupos_redundancia:
     regla_original: "Parejas A-B y C-D; al menos un respaldo real"
     minimo_disponible: null   # ambiguo: no se puede derivar un número único
     validado: false
-    nota: "Grupo con 4 miembros + 1 spare (P101A/B/C/D + P101S). La regla textual no especifica si el spare cubre ambas parejas. REQUIERE VALIDACIÓN."
+    critico_funcional: true
+    nota: >
+      Grupo con 4 miembros + 1 spare (P101A/B/C/D + P101S). Según indicación
+      directa de Sebastián (2026-09-10, aún sin el manual de operaciones
+      adjunto), el grupo se divide en dos subtrenes que comparten el spare:
+      GCP-2A (P101A/B/S) y GCP-2B (P101C/D/S). Estas bombas enfrían la
+      TOTALIDAD de los gases de entrada de la planta — su pérdida total es
+      crítica para GCP-2 completo, no sólo para el subtren. Falta confirmar
+      con el manual si el spare S cubre ambos subtrenes simultáneamente o
+      uno a la vez. REQUIERE VALIDACIÓN antes de fijar un mínimo numérico.
 
   GCP2-P102:
     planta: "GCP2"
@@ -65,7 +74,13 @@ grupos_redundancia:
     regla_original: "Parejas A-B y C-D; al menos un respaldo real"
     minimo_disponible: null
     validado: false
-    nota: "Análogo a GCP2-P101. REQUIERE VALIDACIÓN."
+    critico_funcional: true
+    nota: >
+      Análogo a GCP2-P101: subtrenes GCP-4A (P101A/B/S) y GCP-4B (P101C/D/S)
+      compartiendo spare, según indicación de Sebastián (2026-09-10).
+      Enfrían la totalidad de los gases de entrada de GCP-4. REQUIERE
+      VALIDACIÓN con el manual de operaciones antes de fijar un mínimo
+      numérico.
 
   GCP4-P102:
     planta: "GCP4"
