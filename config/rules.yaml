@@ -3,7 +3,14 @@
 # version: se incrementa cada vez que Operaciones valide o modifique una
 # regla. Queda registrada en cada evaluación (rule_version) para
 # reproducibilidad histórica (sección 9 y 16 del encargo).
-rule_version: "1.0.0-pendiente-validacion"
+#
+# 1.1.0 (2026-09-11): primera validación real, a partir de documentos de
+# ingeniería aportados por Sebastián: Manual DCDA (4501661404-I-05320-0-
+# MNLPR-0001), Descripción del Control Lógico y Regulatorio
+# (SP916744-53200-48EC-S0001 rev.2) y Descripción de Enclavamientos
+# Planta N°3/N°4 (SP916744-53203/53204-48ER-S0002/S0003 rev.2). Ver
+# grupos AGUAS-BOC-901, AGUAS-BOC-904 y CAP3-BHZ, ahora "validado: true".
+rule_version: "1.1.0-parcialmente-validado"
 
 # -----------------------------------------------------------------------
 # IMPORTANTE - LEER ANTES DE MODIFICAR
@@ -48,9 +55,13 @@ grupos_redundancia:
       adjunto), el grupo se divide en dos subtrenes que comparten el spare:
       GCP-2A (P101A/B/S) y GCP-2B (P101C/D/S). Estas bombas enfrían la
       TOTALIDAD de los gases de entrada de la planta — su pérdida total es
-      crítica para GCP-2 completo, no sólo para el subtren. Falta confirmar
-      con el manual si el spare S cubre ambos subtrenes simultáneamente o
-      uno a la vez. REQUIERE VALIDACIÓN antes de fijar un mínimo numérico.
+      crítica para GCP-2 completo, no sólo para el subtren. La nomenclatura
+      de subtrenes (2A/2B) queda confirmada por el documento de ingeniería
+      SP916744-53200-48EC-S0001 rev.2 (§13.2, malla de shutdown: "GCP2A,
+      GCP2B, GCP4A, GCP4B y GCP5"), pero ese documento no detalla el mínimo
+      numérico de bombas P-101 por subtren ni si el spare S cubre ambos
+      subtrenes a la vez. REQUIERE VALIDACIÓN antes de fijar un mínimo
+      numérico.
 
   GCP2-P102:
     planta: "GCP2"
@@ -77,10 +88,9 @@ grupos_redundancia:
     critico_funcional: true
     nota: >
       Análogo a GCP2-P101: subtrenes GCP-4A (P101A/B/S) y GCP-4B (P101C/D/S)
-      compartiendo spare, según indicación de Sebastián (2026-09-10).
-      Enfrían la totalidad de los gases de entrada de GCP-4. REQUIERE
-      VALIDACIÓN con el manual de operaciones antes de fijar un mínimo
-      numérico.
+      compartiendo spare. Nomenclatura confirmada por SP916744-53200-48EC-
+      S0001 rev.2 (§13.2). Enfrían la totalidad de los gases de entrada de
+      GCP-4. REQUIERE VALIDACIÓN del mínimo numérico exacto por bomba.
 
   GCP4-P102:
     planta: "GCP4"
@@ -103,8 +113,14 @@ grupos_redundancia:
     area_sistema: "Balance ácido"
     regla_original: "Una operativa y una reserva verificable"
     minimo_disponible: 2
-    validado: false
-    nota: "Regla numérica clara (1 operativa + 1 reserva = 2), pero Operaciones aún no ha confirmado el criterio de 'reserva verificable'. REQUIERE VALIDACIÓN."
+    validado: true
+    fuente_validacion: "Manual DCDA (4501661404-I-05320-0-MNLPR-0001), Tabla 6.2-20: '5327-BHZ-301A/302A... una bomba en operación y la otra bomba en espera'."
+    nota: >
+      VALIDADO 2026-09-11. El manual de operaciones confirma textualmente
+      el esquema 1 operando + 1 en espera para las Bombas de Torre de
+      Stripping de Ácido Producto (5327-BHZ-301/302). minimo_disponible=2
+      significa: ambas deben estar disponibles (una operando + una lista
+      como reserva) para considerar el grupo "Con respaldo".
 
   CAP4-BHZ:
     planta: "CAP4"
@@ -112,23 +128,52 @@ grupos_redundancia:
     regla_original: "Una operativa y una reserva verificable"
     minimo_disponible: 2
     validado: false
-    nota: "TAG 5327-BHZ-402 duplicado con datos contradictorios (control de calidad #10/#16). REQUIERE VALIDACIÓN antes de aplicar la regla numérica."
+    fuente_validacion: "Manual DCDA (Tabla 6.2-20) confirma el mismo esquema 1+1 para CAP3-BHZ; CAP4 es una planta gemela del mismo proyecto EPC, por lo que la regla es análoga."
+    nota: >
+      La REGLA (1 operando + 1 en espera) queda confirmada por diseño —ver
+      CAP3-BHZ—, pero el TAG '5327-BHZ-402' sigue duplicado con datos
+      contradictorios en el catálogo (control de calidad #10/#16). Se
+      mantiene "validado: false" hasta que se corrija esa duplicación:
+      clasificar automáticamente sobre un TAG ambiguo sería engañoso aunque
+      la regla en sí ya no esté en duda.
 
   AGUAS-BOC-901:
     planta: "Circuito de aguas"
     area_sistema: "Agua torre / desmineralizada"
     regla_original: "Mínimo dos disponibles; cadena de descarga completa"
     minimo_disponible: 2
-    validado: false
-    nota: "Uno de los miembros (BOC901) tiene Estado/Disponibilidad contradictorios (control de calidad #17). REQUIERE VALIDACIÓN."
+    validado: true
+    fuente_validacion: >
+      SP916744-53200-48EC-S0001 rev.2, §13 (malla de shutdown SHUT1/SHUT2/
+      SHUT3) y diagrama lógico (lámina "SHUTDOWN GRID"): BOC-901 y BOC-903
+      identificadas como "Cold Well Pump - CW1 - CW Tower 4" (BOC-902 es
+      análoga, mismo tren). El grupo sólo genera trip real (SHUT2/SHUT3)
+      cuando las TRES bombas que alimentan a un CAP están en trip por más
+      de 180 segundos; una sola bomba en trip sólo genera alarma (SHUT1).
+    nota: >
+      VALIDADO 2026-09-11. Este grupo corresponde a la Torre de
+      Enfriamiento 4 (ver config/process_lines.yaml). minimo_disponible=2
+      refleja el margen operacional antes de llegar al escenario de trip
+      automático (que sólo ocurre con las 3 bombas caídas simultáneamente
+      por >180s) — con sólo 1 de 3 disponible ya no queda margen ante una
+      nueva falla. Persiste una alerta de calidad de dato en BOC901
+      (Estado/Disponibilidad contradictorios, control de calidad #17); esa
+      alerta es independiente de esta validación de regla.
 
   AGUAS-BOC-904:
     planta: "Circuito de aguas"
     area_sistema: "Agua torre / desmineralizada"
     regla_original: "Mínimo dos disponibles; cadena de descarga completa"
     minimo_disponible: 2
-    validado: false
-    nota: "Regla numérica clara, sin contradicciones detectadas en sus miembros, pero aún no confirmada formalmente por Operaciones. REQUIERE VALIDACIÓN."
+    validado: true
+    fuente_validacion: >
+      SP916744-53200-48EC-S0001 rev.2, §13 y diagrama "SHUTDOWN GRID":
+      BOC-904 y BOC-906 identificadas como "Cold Well Pump - CW1 - CW Tower
+      2" (BOC-905 análoga). Misma lógica SHUT1/SHUT2/SHUT3 que AGUAS-BOC-901.
+    nota: >
+      VALIDADO 2026-09-11. Este grupo corresponde a la Torre de
+      Enfriamiento 2/3 (ver config/process_lines.yaml). Mismo criterio de
+      minimo_disponible=2 que AGUAS-BOC-901.
 
 # -----------------------------------------------------------------------
 # Reglas de clasificación de Criticidad / Prioridad por equipo individual

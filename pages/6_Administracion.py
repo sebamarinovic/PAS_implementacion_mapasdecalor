@@ -47,7 +47,9 @@ with tab_reglas:
         "Regla original": cfg["regla_original"],
         "Mínimo sugerido": cfg["minimo_disponible"] if cfg.get("minimo_disponible") is not None else "—",
         "Crítico funcional": "⚠ Sí" if cfg.get("critico_funcional") else "",
-        "Validado": "Sí" if cfg.get("validado") else "No", "Nota": cfg.get("nota", ""),
+        "Validado": "✅ Sí" if cfg.get("validado") else "No",
+        "Fuente de validación": cfg.get("fuente_validacion", ""),
+        "Nota": cfg.get("nota", ""),
     } for nombre, cfg in grupos.items()]
     st.dataframe(filas, use_container_width=True, hide_index=True)
     st.info(

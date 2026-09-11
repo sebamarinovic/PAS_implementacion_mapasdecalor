@@ -62,10 +62,13 @@ def _flecha(fig: go.Figure, x0, y0, x1, y1, punteada: bool, color: str, etiqueta
         )
 
 
+_AZUL_ENFRIAMIENTO = "#3E5C8A"
+
+
 def grafico_lineas_proceso(kpp: pd.DataFrame) -> go.Figure:
-    """Diagrama: GCP-2->CAP-3 y GCP-4->CAP-4 (líneas confirmadas, flecha
-    sólida) + torres de enfriamiento cruzado (flecha punteada gris,
-    pendiente de confirmación operacional)."""
+    """Diagrama: GCP-2->CAP-3 y GCP-4->CAP-4 (líneas de proceso) + torres
+    de enfriamiento cruzado (líneas azules, confirmadas por documentos de
+    ingeniería SP916744-53200-48EC-S0001 — ver config/process_lines.yaml)."""
     datos = load_process_lines()
     fig = go.Figure()
 
@@ -81,26 +84,26 @@ def grafico_lineas_proceso(kpp: pd.DataFrame) -> go.Figure:
     _caja(fig, x_cap, y_linea2, caja_w, caja_h, "CAP-4", _color_planta(kpp, "CAP4"))
     _flecha(fig, x_gcp + caja_w / 2, y_linea2, x_cap - caja_w / 2, y_linea2, punteada=False, color="#1B2A4A")
 
-    # Torres de enfriamiento cruzado (pendientes de confirmación)
-    _caja(fig, x_torre, y_linea1, 2.3, 0.75, "Torre Enf. 2/3", "#EDEFF3", borde=_GRIS_PENDIENTE)
-    _caja(fig, x_torre, y_linea2, 2.3, 0.75, "Torre Enf. 4", "#EDEFF3", borde=_GRIS_PENDIENTE)
+    # Torres de enfriamiento cruzado (confirmadas por SP916744-53200-48EC-S0001)
+    _caja(fig, x_torre, y_linea1, 2.3, 0.75, "Torre Enf. 2/3", "#EDEFF3", borde=_AZUL_ENFRIAMIENTO)
+    _caja(fig, x_torre, y_linea2, 2.3, 0.75, "Torre Enf. 4", "#EDEFF3", borde=_AZUL_ENFRIAMIENTO)
 
     # Cruce: Torre 2/3 enfría CAP-4 (fila inferior); Torre 4 enfría CAP-3 (fila superior)
     fig.add_annotation(
         x=x_cap + caja_w / 2 + 0.05, y=y_linea2, ax=x_torre - 1.15, ay=y_linea1,
         xref="x", yref="y", axref="x", ayref="y", showarrow=True,
-        arrowhead=2, arrowsize=1, arrowwidth=1.6, arrowcolor=_GRIS_PENDIENTE,
+        arrowhead=2, arrowsize=1, arrowwidth=1.6, arrowcolor=_AZUL_ENFRIAMIENTO,
         text="", standoff=6,
     )
     fig.add_annotation(
         x=x_cap + caja_w / 2 + 0.05, y=y_linea1, ax=x_torre - 1.15, ay=y_linea2,
         xref="x", yref="y", axref="x", ayref="y", showarrow=True,
-        arrowhead=2, arrowsize=1, arrowwidth=1.6, arrowcolor=_GRIS_PENDIENTE,
+        arrowhead=2, arrowsize=1, arrowwidth=1.6, arrowcolor=_AZUL_ENFRIAMIENTO,
         text="", standoff=6,
     )
     fig.add_annotation(
-        x=(x_cap + x_torre) / 2 + 0.3, y=(y_linea1 + y_linea2) / 2, text="enfriamiento cruzado · pendiente de confirmar",
-        showarrow=False, font=dict(size=9.5, color=_GRIS_PENDIENTE), textangle=0,
+        x=(x_cap + x_torre) / 2 + 0.3, y=(y_linea1 + y_linea2) / 2, text="enfriamiento cruzado · confirmado",
+        showarrow=False, font=dict(size=9.5, color=_AZUL_ENFRIAMIENTO), textangle=0,
     )
 
     fig.update_xaxes(visible=False, range=[0, 9])

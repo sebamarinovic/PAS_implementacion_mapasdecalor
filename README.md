@@ -97,13 +97,24 @@ decisiones se documentan explícitamente en vez de dejarlas implícitas:
 1. **Catálogos = los reales de la base**, no los sugeridos literalmente en
    el prompt (p. ej. "Buena/Regular/Mala" en vez de "Bueno/Malo") para no
    romper compatibilidad con los 163 registros ya levantados.
-2. **Los 10 grupos de redundancia parten con `validado: false`** en
+2. **Los 10 grupos de redundancia partieron con `validado: false`** en
    `config/rules.yaml`. La propia base original define una Fase 0 de
    "Saneamiento" antes de usar estas reglas para clasificar
    automáticamente, y varias reglas en texto libre (p. ej. "al menos un
    respaldo real") no traen un mínimo numérico exacto. Mientras no se
    validen, el sistema **muestra el conteo real pero no clasifica
    "Sin respaldo"** — evita inventar un criterio operacional.
+   **Actualización 2026-09-11**: con documentos de ingeniería reales
+   aportados por Sebastián (Manual DCDA, SP916744-53200-48EC-S0001 rev.2,
+   SP916744-53203/53204-48ER-S0002/S0003 rev.2) se validaron 3 de los 10
+   grupos (`CAP3-BHZ`, `AGUAS-BOC-901`, `AGUAS-BOC-904`) con citas
+   textuales exactas en `fuente_validacion`. `CAP4-BHZ` sigue pendiente
+   pese a que la regla ya está confirmada por diseño, porque su TAG
+   `5327-BHZ-402` sigue duplicado con datos contradictorios — validar la
+   regla no soluciona un dato ambiguo. Los grupos GCP2/GCP4-P101/P102/P110
+   siguen pendientes: la nomenclatura de subtrenes (GCP-2A/2B, GCP-4A/4B)
+   quedó confirmada, pero ningún documento recibido especifica el mínimo
+   numérico exacto de bombas P-101 por subtren.
 3. **Las evaluaciones del levantamiento inicial conservan la
    Criticidad/Prioridad ya calculadas por Paredes/Avendaño** (no se
    recalculan con el motor de reglas nuevo), para no reescribir un juicio
@@ -120,14 +131,19 @@ decisiones se documentan explícitamente en vez de dejarlas implícitas:
    original advierte explícitamente que esa nomenclatura no está
    confirmada por Operaciones.
 7. **Línea de proceso** (`config/process_lines.yaml`): GCP-2→CAP-3 y
-   GCP-4→CAP-4 vienen confirmadas directamente por Sebastián y no
-   requieren más validación. El **enfriamiento cruzado** entre torres
-   (Torre Enf. 2/3 → CAP-4, Torre Enf. 4 → CAP-3) se dibuja en el mapa de
-   calor como referencia visual (líneas punteadas grises), pero **no se
-   usa para calcular criticidad**: falta confirmar qué ocurre
-   operacionalmente cuando una torre se detiene (¿la planta de ácido
-   sigue en modo degradado o debe pararse?). Mismo criterio que los
-   grupos de redundancia: mostrar, no inventar.
+   GCP-4→CAP-4 vienen confirmadas directamente por Sebastián. El
+   **enfriamiento cruzado** entre torres (Torre Enf. 2/3 → CAP-4, Torre
+   Enf. 4 → CAP-3) quedó **confirmado el 2026-09-11** por
+   SP916744-53200-48EC-S0001 rev.2 (malla de shutdown SHUT1/SHUT2/SHUT3):
+   las bombas BOC-901/902/903 son "Cold Well Pump - CW Tower 4" y las
+   BOC-904/905/906 "CW Tower 2", y una planta de ácido sólo para si las 3
+   bombas de su torre fallan simultáneamente por más de 180 segundos (con
+   1 o 2 disponibles sigue operando normalmente). También se confirmó
+   (interlock I-9) que las bombas de agua desmineralizada BHZ-305/BHZ-405
+   tienen respaldo automático vía una bomba común (BHZ-001): si la
+   dedicada de una planta se detiene, la común arranca sola y la planta
+   no necesita pararse. Lo único que sigue sin confirmar documentalmente
+   es el mínimo exacto de bombas P-101 (GCP) por subtren — ver punto 2.
 
 Cuando una decisión es puramente operacional y no hay certeza (p. ej. el
 mínimo exacto de bombas requeridas en un grupo), el sistema la deja
