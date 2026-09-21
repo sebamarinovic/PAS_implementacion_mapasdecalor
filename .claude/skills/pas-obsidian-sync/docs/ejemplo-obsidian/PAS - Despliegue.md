@@ -31,8 +31,8 @@ streamlit run app.py
 - **Acceso:** restringido por correo (repo privado → app privada por defecto). Invitados vía Settings → Sharing en share.streamlit.io.
 - **Correos invitados:** lpare004@codelco.cl, garay028@codelco.cl, criva006@codelco.cl
 
-> [!danger] Verificar SIEMPRE
-> El toggle "Make this app public" en el panel de Sharing debe estar **APAGADO**. Se detectó encendido accidentalmente el 2026-09-10 — revisar antes de cada envío de link a nuevas personas.
+> [!danger] Decisión de riesgo aceptada — app pública (2026-09-21)
+> El toggle "Make this app public" quedó **encendido a propósito**. Motivo: el modo restringido de Streamlit Cloud exige que cada invitado inicie sesión (Google/GitHub/email con link mágico), y las políticas de seguridad de Codelco bloquean ese tipo de login externo con el correo corporativo — los 3 invitados no lograban entrar. Sebastián evaluó el riesgo (datos operacionales reales expuestos a cualquiera con la URL) y decidió mantenerlo público para no bloquear la revisión de jefatura. Alternativa evaluada y descartada por ahora: agregar contraseña propia dentro de la app vía `st.secrets` (no requeriría login externo). Revisar si Streamlit Cloud ofrece una opción "público pero no listado/buscable" como punto medio.
 
 > [!warning] Datos no persistentes en este despliegue
 > Streamlit Community Cloud reinicia el sistema de archivos al dormir por inactividad o redesplegar. Sirve para **revisión/demo**, no reemplaza correr la app localmente (o en infraestructura definitiva) para uso operacional real turno a turno.
