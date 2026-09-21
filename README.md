@@ -86,10 +86,6 @@ un turno (equivalente a `PAS_CierresTurno` del diseño SharePoint original).
 
 **`auditoria`**: quién cambió qué, cuándo y con qué valor anterior/nuevo.
 
-**`avisos_sap`**: avisos de mantenimiento cargados por lote desde un
-export SAP (ver `import_avisos_sap.py`), con el vínculo best-effort a un
-`equipment_id` del catálogo y la planta inferida cuando hay evidencia.
-
 Un equipo puede tener N evaluaciones; nunca se hace `UPDATE`/`DELETE`
 sobre evaluaciones ya guardadas.
 
@@ -162,10 +158,7 @@ mínimo exacto de bombas requeridas en un grupo), el sistema la deja
   `pi_tag`/`pi_variable`/`pi_unidad` ya existen en `equipos`. No hay
   credenciales configuradas todavía, así que no se conecta a nada real.
 - **SAP**: el campo `aviso_sap` ya se registra por evaluación; falta el
-  conector cuando haya acceso a la API de SAP. Mientras tanto, un export
-  manual de avisos SAP se puede cargar por lote con
-  `import_avisos_sap.py` (tabla `avisos_sap`, ver más abajo) y aparece en
-  los informes PDF cruzado por planta.
+  conector cuando haya acceso a la API de SAP.
 
 ## Ejecución
 
@@ -179,19 +172,3 @@ python import_initial_data.py [ruta_a_otro_excel.xlsx]
 
 Es idempotente: el catálogo se actualiza (upsert) y las evaluaciones
 iniciales no se duplican si el script se vuelve a ejecutar.
-
-## Cargar avisos SAP (mantenimiento)
-
-```
-python import_avisos_sap.py <ruta_al_export_sap.xlsx>
-```
-
-Filtra por `Pto.tbjo.responsable` según `config/avisos_sap.yaml`
-(editable sin tocar código) y guarda en la tabla `avisos_sap`. Cada aviso
-se intenta vincular a un equipo del catálogo por coincidencia de TAG en
-el texto (`match_confianza`: `Alta` / `Ambigua` si el texto menciona más
-de un TAG distinto / `Sin vincular`) y se infiere su planta a partir del
-prefijo de "Ubicación técnica" (`planta_inferida`, sólo prefijos con
-evidencia validada — el resto queda sin identificar en vez de adivinar).
-Los avisos aparecen en los informes PDF (por área y consolidado),
-agrupados por planta. Es idempotente (upsert por número de Aviso).

@@ -91,30 +91,6 @@ CREATE TABLE IF NOT EXISTS auditoria (
     valor_anterior  TEXT,
     valor_nuevo     TEXT
 );
-
-CREATE TABLE IF NOT EXISTS avisos_sap (
-    aviso                     TEXT PRIMARY KEY,
-    prioridad                 TEXT,
-    creado_el                 TEXT,
-    inicio_deseado            TEXT,
-    status_sistema            TEXT,
-    status_usuario            TEXT,
-    descripcion               TEXT,
-    denom_ubicacion_tecnica   TEXT,
-    ubicacion_tecnica         TEXT,
-    pto_trabajo_responsable   TEXT,
-    denominacion_ejecutor     TEXT,
-    creado_por                TEXT,
-    modificado_el             TEXT,
-    modificado_por            TEXT,
-    equipment_id              TEXT REFERENCES equipos(equipment_id),
-    match_confianza           TEXT DEFAULT 'Sin vincular',
-    planta_inferida           TEXT,
-    fuente_archivo            TEXT,
-    importado_el              TEXT
-);
-CREATE INDEX IF NOT EXISTS idx_avisos_sap_planta
-    ON avisos_sap(planta_inferida);
 """
 
 
@@ -263,30 +239,3 @@ def get_auditoria(conn: sqlite3.Connection, limite: int = 200) -> list[sqlite3.R
     return conn.execute(
         "SELECT * FROM auditoria ORDER BY fecha_hora DESC LIMIT ?", (limite,)
     ).fetchall()
-
-
-# ---------------------------------------------------------------------------
-# AVISOS SAP (carga masiva desde exportación SAP, ver import_avisos_sap.py)
-# ---------------------------------------------------------------------------
-
-def upsert_aviso_sap(conn: sqlite3.Connection, aviso: dict) -> None:
-    cols = [
-        "aviso", "prioridad", "creado_el", "inicio_deseado", "status_sistema",
-        "status_usuario", "descripcion", "denom_ubicacion_tecnica", "ubicacion_tecnica",
-        "pto_trabajo_responsable", "denominacion_ejecutor", "creado_por", "modificado_el",
-        "modificado_por", "equipment_id", "match_confianza", "planta_inferida",
-        "fuente_archivo", "importado_el",
-    ]
-    valores = [aviso.get(c) for c in cols]
-    placeholders = ",".join(["?"] * len(cols))
-    updates = ",".join([f"{c}=excluded.{c}" for c in cols if c != "aviso"])
-    conn.execute(
-        f"""INSERT INTO avisos_sap ({','.join(cols)}) VALUES ({placeholders})
-            ON CONFLICT(aviso) DO UPDATE SET {updates}""",
-        valores,
-    )
-
-
-def get_avisos_sap_df(conn: sqlite3.Connection):
-    import pandas as pd
-    return pd.read_sql_query("SELECT * FROM avisos_sap", conn)
