@@ -28,7 +28,7 @@ from reportlab.graphics.shapes import Drawing
 from reportlab.graphics.charts.barcharts import HorizontalBarChart
 from reportlab.graphics.charts.piecharts import Pie
 
-from core import analytics, rules, utils
+from core import analytics, avisos_sap, rules, utils
 
 REPORTS_DIR = Path(__file__).resolve().parent.parent / "reports"
 
@@ -297,7 +297,8 @@ def _resumen_ejecutivo(kpis: dict, kpis_planta: pd.DataFrame, redundancia: list[
 def _construir_documento(output_path: Path, titulo: str, turno: str | None, responsable: str | None,
                           df_estado: pd.DataFrame, redundancia: list[dict],
                           agg_df: pd.DataFrame, agg_columna: str, agg_etiqueta: str,
-                          df_comparacion: dict | None = None) -> Path:
+                          df_comparacion: dict | None = None,
+                          df_avisos_sap: pd.DataFrame | None = None) -> Path:
     kpis = analytics.kpis_generales(df_estado)
     kpis_planta = analytics.kpis_por_planta(df_estado)
 
@@ -372,13 +373,35 @@ def _construir_documento(output_path: Path, titulo: str, turno: str | None, resp
         [0.14, 0.14, 0.17, 0.55],
         "Sin hallazgos registrados en el periodo."))
 
-    story.append(Paragraph("Avisos SAP", _STYLES["PASSeccion"]))
+    story.append(Paragraph("Avisos SAP (registrados por el Jefe de Turno)", _STYLES["PASSeccion"]))
     con_sap = df_estado[df_estado["aviso_sap"].fillna("").astype(str).str.strip() != ""]
     story.append(_tabla_equipos(
         con_sap, ["tag", "planta", "estado", "aviso_sap", "ot"],
         ["TAG", "Planta", "Estado", "Aviso SAP", "OT"],
         [0.16, 0.16, 0.2, 0.24, 0.24],
         "Sin avisos SAP abiertos en el periodo."))
+
+    story.append(Paragraph("Avisos SAP (carga masiva de mantenimiento)", _STYLES["PASSeccion"]))
+    if df_avisos_sap is not None and not df_avisos_sap.empty:
+        tabla_sap = df_avisos_sap.copy()
+        tabla_sap["equipo_vinculado"] = tabla_sap.apply(
+            lambda r: r["tag"] if pd.notna(r.get("tag"))
+            else ("Ambiguo (revisar)" if r.get("match_confianza") == "Ambigua" else "Sin vincular"),
+            axis=1)
+        tabla_sap["fecha_creado"] = pd.to_datetime(tabla_sap["creado_el"]).dt.strftime("%d-%m-%Y")
+        story.append(_tabla_equipos(
+            tabla_sap, ["aviso", "descripcion", "fecha_creado", "status_sistema", "equipo_vinculado"],
+            ["Aviso", "Descripción", "Creado", "Estado", "Equipo"],
+            [0.12, 0.4, 0.13, 0.15, 0.2],
+            "Sin avisos SAP cargados para este ámbito."))
+        story.append(Paragraph(
+            "Fuente: carga masiva desde export SAP (import_avisos_sap.py), filtrada por punto de "
+            "trabajo responsable. 'Equipo' indica el TAG del catálogo PAS vinculado por coincidencia "
+            "de texto, o 'Sin vincular' cuando el aviso no menciona un TAG identificable — no implica "
+            "que el aviso no sea real, sólo que no se pudo asociar automáticamente a un equipo puntual.",
+            _STYLES["PASTexto"]))
+    else:
+        story.append(Paragraph("Sin avisos SAP cargados para este ámbito.", _STYLES["PASTexto"]))
 
     story.append(Paragraph("Pendientes de validación", _STYLES["PASSeccion"]))
     pend = df_estado[(df_estado["requiere_validacion"] == "Sí") | (df_estado["estado_dato"] != "OK")]
@@ -416,9 +439,11 @@ def informe_area(conn, planta: str, responsable: str | None = None, turno: str |
     nombre_visible = catalogos.get("plantas_nombre_visible", {}).get(planta, planta)
     fecha = dt.date.today().strftime("%Y%m%d")
     output_path = REPORTS_DIR / f"Informe_{utils.slug(planta)}_{fecha}.pdf"
+    df_sap = avisos_sap.avisos_por_planta(conn, planta)
     return _construir_documento(
         output_path, f"Informe PAS — {nombre_visible}", turno, responsable,
         df_planta, redundancia, agg, "area_sistema", "Área / Sistema", df_comparacion,
+        df_avisos_sap=df_sap,
     )
 
 
@@ -432,7 +457,9 @@ def informe_consolidado(conn, responsable: str | None = None, turno: str | None 
 
     fecha = dt.date.today().strftime("%Y%m%d")
     output_path = REPORTS_DIR / f"Informe_Consolidado_PAS_{fecha}.pdf"
+    df_sap = avisos_sap.avisos_todos(conn)
     return _construir_documento(
         output_path, "Informe Consolidado PAS", turno, responsable,
         df, redundancia, agg, "planta_visible", "Planta", df_comparacion,
+        df_avisos_sap=df_sap,
     )
