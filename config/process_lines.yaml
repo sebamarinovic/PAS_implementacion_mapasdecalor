@@ -1,0 +1,108 @@
+# Líneas de proceso PAS — relación funcional entre plantas
+#
+# FUENTE ORIGINAL: indicado directamente por Sebastián en conversación de
+# trabajo (2026-09-10). NO proviene del Excel original
+# (PAS_SharePoint_Implementacion_v1.xlsx) ni fue parte del levantamiento
+# de Leonardo Paredes / Eleazar Avendaño.
+#
+# ACTUALIZADO 2026-09-11 con documentos de ingeniería reales aportados por
+# Sebastián:
+#   - Manual DCDA (4501661404-I-05320-0-MNLPR-0001)
+#   - SP916744-53200-48EC-S0001 rev.2 "Descripción del Control Lógico y
+#     Regulatorio" (malla de shutdown, complejo completo)
+#   - SP916744-53203-48ER-S0002 rev.2 "Descripción de Enclavamientos
+#     Planta N°3" (interlock I-9, bombas agua desmineralizada)
+#   - SP916744-53204-48ER-S0003 rev.2 "Descripción de Enclavamientos
+#     Planta N°4"
+#   - Diagrama de Plantas de Ácido Doble Contacto/Doble Absorción
+#
+# El enfriamiento cruzado (qué torre enfría a qué planta, y qué pasa si
+# se detiene) queda CONFIRMADO por estos documentos — ver notas en cada
+# entrada. Lo único que sigue sin confirmar documentalmente es el mínimo
+# exacto de bombas P-101 (GCP) por subtren.
+
+fuente: >
+  Líneas de proceso indicadas por Sebastián (2026-09-10); enfriamiento
+  cruzado y bombas de agua desmineralizada confirmados con documentos de
+  ingeniería SNC-Lavalin/CODELCO (2026-09-11): Manual DCDA,
+  SP916744-53200-48EC-S0001 rev.2, SP916744-53203/53204-48ER-S0002/S0003
+  rev.2. P-101 (GCP) aún sin confirmación documental del mínimo exacto.
+
+lineas_proceso:
+  - nombre: "Línea 1"
+    etapas: ["GCP2", "CAP3"]
+  - nombre: "Línea 2"
+    etapas: ["GCP4", "CAP4"]
+
+# Bombas P-101: enfrían la totalidad de los gases de entrada de su planta
+# (GCP-2 / GCP-4). Su pérdida total es crítica para toda la planta, no
+# sólo para el subtren. La nomenclatura de subtrenes (GCP-2A/2B, GCP-4A/4B,
+# y GCP-5 que no forma parte de PAS) está CONFIRMADA por
+# SP916744-53200-48EC-S0001 rev.2 §13.2 (malla de shutdown). El mínimo
+# numérico de bombas por subtren y el comportamiento exacto del spare
+# compartido siguen sin confirmación documental — ver rules.yaml
+# (GCP2-P101 / GCP4-P101, "validado: false").
+enfriamiento_gases_entrada:
+  - planta: "GCP2"
+    subtrenes: [{nombre: "GCP-2A", tags: ["P101A(II)", "P101B(II)", "P101S(II)"]},
+                {nombre: "GCP-2B", tags: ["P101C(II)", "P101D(II)", "P101S(II)"]}]
+  - planta: "GCP4"
+    subtrenes: [{nombre: "GCP-4A", tags: ["P101A(IV)", "P101B(IV)", "P101S(IV)"]},
+                {nombre: "GCP-4B", tags: ["P101C(IV)", "P101D(IV)", "P101S(IV)"]}]
+
+# Bombas de circulación de agua desmineralizada (circuito cerrado) por
+# planta de ácido. CONFIRMADO por Manual DCDA §7.3 e interlock I-9
+# (SP916744-53203-48ER-S0002): cada planta tiene una bomba dedicada
+# (BHZ-305 para CAP3, BHZ-405 para CAP4) respaldada por UNA bomba común
+# compartida (BHZ-001) con arranque automático:
+#   - Si BHZ-305 (o BHZ-405) se detiene ("Apagado"), el interlock I-9
+#     abre la válvula de alimentación de la bomba común hacia esa planta
+#     y arranca BHZ-001 automáticamente. La planta NO necesita pararse:
+#     el respaldo es automático, sin intervención manual.
+#   - BHZ-001 es un respaldo COMPARTIDO entre CAP3 y CAP4: si ambas bombas
+#     dedicadas fallaran a la vez, no está confirmado documentalmente que
+#     BHZ-001 tenga capacidad para cubrir a las dos plantas simultáneamente.
+# Nota de calidad de dato: el catálogo maestro (163 equipos) registra este
+# equipo como "5320-BHZ-001"; los documentos de ingeniería lo llaman
+# consistentemente "5328-BHZ-001". Es casi seguro el mismo activo físico
+# con una discrepancia de prefijo entre fuentes — no se corrige aquí
+# automáticamente (ver control de calidad); debe confirmarlo Operaciones.
+bombas_agua_desmi:
+  - tag: "5328-BHZ-305"
+    enfria_a: "CAP3"
+    respaldo_comun: "5320-BHZ-001"  # documentos de ingeniería: "5328-BHZ-001"
+    nota: "Respaldo automático confirmado (interlock I-9): si BHZ-305 se detiene, arranca la bomba común y la planta continúa operando sin parar."
+  - tag: "5328-BHZ-405"
+    enfria_a: "CAP4"
+    respaldo_comun: "5320-BHZ-001"  # documentos de ingeniería: "5328-BHZ-001"
+    nota: "Respaldo automático confirmado (interlock I-9): si BHZ-405 se detiene, arranca la bomba común y la planta continúa operando sin parar."
+
+# Enfriamiento cruzado: cada torre enfría el sistema ácido/agua de la
+# planta CONTRARIA a su numeración (de ahí el cruce en el diagrama).
+# CONFIRMADO por SP916744-53200-48EC-S0001 rev.2 §13 (malla de shutdown
+# SHUT1/SHUT2/SHUT3) y su diagrama lógico "SHUTDOWN GRID": las bombas
+# 05316-BOC-901/902/903 están etiquetadas como "Cold Well Pump - CW Tower
+# 4" y las 05316-BOC-904/905/906 como "Cold Well Pump - CW Tower 2".
+#
+# Consecuencia operacional CONFIRMADA (antes marcada "pendiente"):
+#   - 1 bomba en trip -> sólo ALARMA (SHUT1). La planta sigue operando
+#     normalmente con las otras 2.
+#   - Las 3 bombas de una misma torre en trip por más de 180 segundos ->
+#     recién ahí ocurre el TRIP real (SHUT2/SHUT3) de esa planta de ácido.
+# Es decir: la planta NO para con una o dos bombas fuera de servicio;
+# sólo para si se pierden las 3 simultáneamente y de forma sostenida.
+enfriamiento_cruzado:
+  - torre: "Torre de Enfriamiento 2/3"
+    enfria_a: "CAP4"
+    sistema: "ácido/agua"
+    bombas: ["BOC904", "BOC905", "BOC906"]   # = grupo AGUAS-BOC-904 en rules.yaml (validado: true)
+    intercambiadores: ["INC-401", "INC-402", "INC-403", "INC-404"]  # análogos a 5328-INC-301/302/303/304 de CAP3; prefijo exacto de CAP4 no confirmado en los documentos recibidos
+    fuente_validacion: "SP916744-53200-48EC-S0001 rev.2 §13, diagrama SHUTDOWN GRID: BOC-904/906 = 'Cold Well Pump - CW Tower 2'."
+    nota: "CONFIRMADO 2026-09-11: la planta sólo para si las 3 bombas (BOC904/905/906) fallan simultáneamente por >180s; con 1 o 2 disponibles sigue operando normalmente."
+  - torre: "Torre de Enfriamiento 4"
+    enfria_a: "CAP3"
+    sistema: "ácido/agua"
+    bombas: ["BOC901", "BOC902", "BOC903"]   # = grupo AGUAS-BOC-901 en rules.yaml (validado: true)
+    intercambiadores: ["5328-INC-301", "5328-INC-302", "5328-INC-303", "5328-INC-304"]  # confirmados por Manual DCDA §7.3: intercambiadores de calor de agua de enfriamiento, 3 de 4 en servicio + 1 spare instalado
+    fuente_validacion: "SP916744-53200-48EC-S0001 rev.2 §13, diagrama SHUTDOWN GRID: BOC-901/903 = 'Cold Well Pump - CW Tower 4'. Manual DCDA §7.3 (Tabla 7.3-2/7.3-3) para los intercambiadores."
+    nota: "CONFIRMADO 2026-09-11: la planta sólo para si las 3 bombas (BOC901/902/903) fallan simultáneamente por >180s; con 1 o 2 disponibles sigue operando normalmente. Los intercambiadores 5328-INC-301/302/303/304 operan 3-de-4 con 1 spare instalado (N+1)."
